@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Papazscore</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    header { display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+    input { padding:8px 10px; width: 260px; }
+    button { padding:8px 10px; cursor:pointer; }
+    .meta { color:#555; font-size: 12px; }
+    .match { padding:10px 0; border-bottom:1px solid #eee; }
+    .line { font-size: 16px; }
+    .sub { color:#666; font-size: 12px; margin-top:4px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h2 style="margin:0">Papazscore</h2>
+    <input id="q" placeholder="Takım / lig ara (örn: Fenerbahçe)" />
+    <button id="refresh">Yenile</button>
+    <div class="meta" id="meta"></div>
+  </header>
+
+  <div id="list" style="margin-top:14px;"></div>
+
+  <script>
+    const API = "http://localhost:3000/live";
+    const listEl = document.getElementById("list");
+    const metaEl = document.getElementById("meta");
+    const qEl = document.getElementById("q");
+
+    function fmtMinute(m, status) {
+      if (Number.isFinite(m)) return `${m}'`;
+      return status || "";
+    }
+
+    function render(data) {
+      const q = (qEl.value || "").toLowerCase().trim();
+
+      const events = (data.events || []).filter(e => {
+        if (!q) return true;
+        return (
+          (e.home || "").toLowerCase().includes(q) ||
+          (e.away || "").toLowerCase().includes(q) ||
+          (e.league || "").toLowerCase().includes(q)
+        );
+      });
+
+      metaEl.textContent = `Maç: ${events.length} | Güncelleme: ${new Date(data.updatedAt || Date.now()).toLocaleTimeString()}`;
+      listEl.innerHTML = "";
+
+      for (const e of events) {
+        const div = document.createElement("div");
+        div.className = "match";
+        div.innerHTML = `
+          <div class="line">
+            ${e.home} <b>${e.homeScore ?? "-"}</b> - <b>${e.awayScore ?? "-"}</b> ${e.away}
+            <span style="color:#999; margin-left:10px">${fmtMinute(e.minute, e.status)}</span>
+          </div>
+          <div class="sub">${e.league || ""}</div>
+        `;
+        listEl.appendChild(div);
+      }
+    }
+
+    async function load() {
+      try {
+        const r = await fetch(API);
+        const data = await r.json();
+        render(data);
+      } catch (err) {
+        metaEl.textContent = "API erişilemedi. server.js çalışıyor mu?";
+        listEl.innerHTML = "";
+      }
+    }
+
+    document.getElementById("refresh").onclick = load;
+    qEl.addEventListener("input", () => load());
+
+    load();
+    setInterval(load, 15000);
+  </script>
+</body>
+</html>
