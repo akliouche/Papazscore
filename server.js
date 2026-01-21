@@ -12,7 +12,18 @@ let lastScores = {};
 
 async function initBrowser() {
   if (browser) return;
-  browser = await puppeteer.launch({ headless: "new" });
+
+  browser = await puppeteer.launch({
+    headless: "new",
+    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
+    args: [
+      "--no-sandbox",
+      "--disable-setuid-sandbox",
+      "--disable-dev-shm-usage",
+      "--disable-gpu",
+    ],
+  });
+
   page = await browser.newPage();
 }
 
